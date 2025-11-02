@@ -9,6 +9,7 @@ namespace FpgaInterface
     //=================================================================
     // Public Facing Types
     //=================================================================
+    
     /// <summary>
     /// Represents the result of a FIFO read operation.
     /// </summary>
@@ -30,7 +31,8 @@ namespace FpgaInterface
         public decimal Value { get; }
         public FxpValue(decimal value) { Value = value; }
         public bool Equals(FxpValue other) => Value == other.Value;
-        public override bool Equals(object obj) => obj is FxpValue other && Equals(other);
+        // FIX: Changed to object? to match base
+        public override bool Equals(object? obj) => obj is FxpValue other && Equals(other);
         public override int GetHashCode() => Value.GetHashCode();
         public override string ToString() => Value.ToString();
         public static implicit operator decimal(FxpValue fxp) => fxp.Value;
@@ -48,7 +50,8 @@ namespace FpgaInterface
         public FxpValueWithOverflow(bool overflow, decimal value) { Overflow = overflow; Value = value; }
         public void Deconstruct(out bool overflow, out decimal value) { overflow = Overflow; value = Value; }
         public bool Equals(FxpValueWithOverflow other) => Overflow == other.Overflow && Value == other.Value;
-        public override bool Equals(object obj) => obj is FxpValueWithOverflow other && Equals(other);
+        // FIX: Changed to object? to match base
+        public override bool Equals(object? obj) => obj is FxpValueWithOverflow other && Equals(other);
         public override int GetHashCode() => (Value, Overflow).GetHashCode();
         public override string ToString() => $"(Overflow: {Overflow}, Value: {Value})";
     }
@@ -132,8 +135,8 @@ namespace FpgaInterface
         public FxpTypeInfo(string name, XElement xml) : base(name)
         {
             IsSigned = xml.Element("Signed")?.Value.ToLower() == "true";
-            WordLength = int.Parse(xml.Element("WordLength").Value);
-            IntegerWordLength = int.Parse(xml.Element("IntegerWordLength").Value);
+            WordLength = int.Parse(xml.Element("WordLength")!.Value); // FIX: Added null-forgiving operator
+            IntegerWordLength = int.Parse(xml.Element("IntegerWordLength")!.Value); // FIX: Added null-forgiving operator
             HasOverflow = xml.Element("IncludeOverflowStatus")?.Value.ToLower() == "true";
 
             // Calculate Delta, Min, Max as in the Python _FXP class
@@ -218,8 +221,8 @@ namespace FpgaInterface
 
         public ArrayTypeInfo(string name, XElement xml, Func<XElement, FpgaTypeInfo> typeParser) : base(name)
         {
-            Size = int.Parse(xml.Element("Size").Value);
-            ElementType = typeParser(xml.Element("Type").Elements().First());
+            Size = int.Parse(xml.Element("Size")!.Value); // FIX: Added null-forgiving operator
+            ElementType = typeParser(xml.Element("Type")!.Elements().First()); // FIX: Added null-forgiving operator
         }
 
         public override object Unpack(BitReader reader)
@@ -240,7 +243,11 @@ namespace FpgaInterface
             
             for (int i = 0; i < Size; i++)
             {
-                ElementType.Pack(array.GetValue(i), writer);
+                // FIX: Check for null element
+                object? elementValue = array.GetValue(i);
+                if (elementValue == null)
+                    throw new ArgumentNullException(nameof(value), $"Array element at index {i} is null.");
+                ElementType.Pack(elementValue, writer);
             }
         }
     }
@@ -260,7 +267,7 @@ namespace FpgaInterface
         {
             Elements = new List<(string, FpgaTypeInfo)>();
             var names = new HashSet<string>();
-            foreach (var elementXml in xml.Element("TypeList").Elements())
+            foreach (var elementXml in xml.Element("TypeList")!.Elements()) // FIX: Added null-forgiving operator
             {
                 var elementTypeInfo = typeParser(elementXml);
                 if (!names.Add(elementTypeInfo.Name))
@@ -290,6 +297,10 @@ namespace FpgaInterface
 
         public override void Pack(object value, BitWriter writer)
         {
+            // FIX: Check for null dictionary
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            
             var dict = (Dictionary<string, object>)value;
             // Python packs LSB first, so we write in order of definition.
             foreach (var (name, type) in Elements)

@@ -72,89 +72,99 @@ namespace FpgaInterface
             var fifos = new Dictionary<string, FifoInfo>();
 
             // Parse Signature
-            Signature = doc.Root.Element("SignatureRegister").Value.ToUpper();
+            // FIX: Added null-conditional and null-forgiving operators
+            Signature = doc.Root?.Element("SignatureRegister")?.Value.ToUpper() ?? throw new InvalidDataException("Bitfile missing SignatureRegister.");
 
             // Parse Base Address
-            BaseAddressOnDevice = uint.Parse(doc.Root
-                .Element("Project")
-                .Element("CompilationResultsTree")
-                .Element("CompilationResults")
-                .Element("NiFpga")
-                .Element("BaseAddressOnDevice").Value);
+            // FIX: Added null-conditional and null-forgiving operators
+            BaseAddressOnDevice = uint.Parse(doc.Root?
+                .Element("Project")?
+                .Element("CompilationResultsTree")?
+                .Element("CompilationResults")?
+                .Element("NiFpga")?
+                .Element("BaseAddressOnDevice")?.Value ?? "0");
 
             // Parse Registers
-            var registerList = doc.Root.Element("VI").Element("RegisterList").Elements("Register");
-            foreach (var regXml in registerList)
+            // FIX: Added null-conditional and null-forgiving operators
+            var registerList = doc.Root?.Element("VI")?.Element("RegisterList")?.Elements("Register");
+            if (registerList != null)
             {
-                try
+                foreach (var regXml in registerList)
                 {
-                    string name = regXml.Element("Name").Value;
-                    uint offset = uint.Parse(regXml.Element("Offset").Value);
-                    bool isIndicator = regXml.Element("Indicator").Value.ToLower() == "true";
-                    bool isInternal = regXml.Element("Internal").Value.ToLower() == "true";
-                    bool accessMayTimeout = regXml.Element("AccessMayTimeout").Value.ToLower() == "true";
-
-                    if (isInternal) continue; // Skip internal registers
-
-                    XElement typeElement = regXml.Element("Datatype").Elements().First();
-                    FpgaTypeInfo typeInfo = ParseTypeElement(typeElement);
-
-                    var regInfo = new RegisterInfo(name, offset, typeInfo, isIndicator, accessMayTimeout);
-                    if (!registers.ContainsKey(name))
+                    try
                     {
-                        registers.Add(name, regInfo);
+                        string name = regXml.Element("Name")!.Value;
+                        uint offset = uint.Parse(regXml.Element("Offset")!.Value);
+                        bool isIndicator = regXml.Element("Indicator")!.Value.ToLower() == "true";
+                        bool isInternal = regXml.Element("Internal")!.Value.ToLower() == "true";
+                        bool accessMayTimeout = regXml.Element("AccessMayTimeout")!.Value.ToLower() == "true";
+
+                        if (isInternal) continue; // Skip internal registers
+
+                        XElement typeElement = regXml.Element("Datatype")!.Elements().First();
+                        FpgaTypeInfo typeInfo = ParseTypeElement(typeElement);
+
+                        var regInfo = new RegisterInfo(name, offset, typeInfo, isIndicator, accessMayTimeout);
+                        if (!registers.ContainsKey(name))
+                        {
+                            registers.Add(name, regInfo);
+                        }
                     }
-                }
-                catch (Exception ex) when (ex is NotSupportedException || ex is NullReferenceException)
-                {
-                    // Log warning: Skipping unsupported register type
-                    Console.WriteLine($"Warning: Skipping register '{regXml.Element("Name")?.Value}': {ex.Message}");
+                    catch (Exception ex) when (ex is NotSupportedException || ex is NullReferenceException)
+                    {
+                        // Log warning: Skipping unsupported register type
+                        Console.WriteLine($"Warning: Skipping register '{regXml.Element("Name")?.Value}': {ex.Message}");
+                    }
                 }
             }
 
             // Parse FIFOs (DMA Channels)
-            var fifoList = doc.Root
-                .Element("Project")
-                .Element("CompilationResultsTree")
-                .Element("CompilationResults")
-                .Element("NiFpga")
-                .Element("DmaChannelAllocationList").Elements("Channel");
+            // FIX: Added null-conditional and null-forgiving operators
+            var fifoList = doc.Root?
+                .Element("Project")?
+                .Element("CompilationResultsTree")?
+                .Element("CompilationResults")?
+                .Element("NiFpga")?
+                .Element("DmaChannelAllocationList")?.Elements("Channel");
 
-            foreach (var channelXml in fifoList)
+            if (fifoList != null)
             {
-                try
+                foreach (var channelXml in fifoList)
                 {
-                    string name = channelXml.Attribute("name").Value;
-                    uint number = uint.Parse(channelXml.Element("Number").Value);
+                    try
+                    {
+                        string name = channelXml.Attribute("name")!.Value;
+                        uint number = uint.Parse(channelXml.Element("Number")!.Value);
                     
-                    // TransferSizeBytes exists for composite types, but not always for simple types
-                    var transferSizeEl = channelXml.Element("TransferSizeBytes");
-                    int transferSize;
+                        // TransferSizeBytes exists for composite types, but not always for simple types
+                        var transferSizeEl = channelXml.Element("TransferSizeBytes");
+                        int transferSize;
                     
-                    XElement typeElement = channelXml.Element("DataType").Elements().First();
-                    FpgaTypeInfo typeInfo = ParseTypeElement(typeElement);
+                        XElement typeElement = channelXml.Element("DataType")!.Elements().First();
+                        FpgaTypeInfo typeInfo = ParseTypeElement(typeElement);
 
-                    if(transferSizeEl != null)
-                    {
-                        transferSize = int.Parse(transferSizeEl.Value);
-                    }
-                    else
-                    {
-                        // Infer size for simple types
-                        transferSize = (typeInfo.SizeInBits + 7) / 8;
-                        // FXP defaults to 8 bytes (U64) if not specified
-                        if(typeInfo is FxpTypeInfo) transferSize = 8;
-                    }
+                        if(transferSizeEl != null)
+                        {
+                            transferSize = int.Parse(transferSizeEl.Value);
+                        }
+                        else
+                        {
+                            // Infer size for simple types
+                            transferSize = (typeInfo.SizeInBits + 7) / 8;
+                            // FXP defaults to 8 bytes (U64) if not specified
+                            if(typeInfo is FxpTypeInfo) transferSize = 8;
+                        }
 
-                    var fifoInfo = new FifoInfo(name, number, typeInfo, transferSize);
-                    if (!fifos.ContainsKey(name))
-                    {
-                        fifos.Add(name, fifoInfo);
+                        var fifoInfo = new FifoInfo(name, number, typeInfo, transferSize);
+                        if (!fifos.ContainsKey(name))
+                        {
+                            fifos.Add(name, fifoInfo);
+                        }
                     }
-                }
-                catch (Exception ex) when (ex is NotSupportedException || ex is NullReferenceException)
-                {
-                    Console.WriteLine($"Warning: Skipping FIFO '{channelXml.Attribute("name")?.Value}': {ex.Message}");
+                    catch (Exception ex) when (ex is NotSupportedException || ex is NullReferenceException)
+                    {
+                        Console.WriteLine($"Warning: Skipping FIFO '{channelXml.Attribute("name")?.Value}': {ex.Message}");
+                    }
                 }
             }
 

@@ -11,14 +11,16 @@ namespace FpgaInterface
     public class FpgaFifo
     {
         private readonly FpgaSession _session;
-        private readonly FifoInfo _info;
         private readonly uint _fifoNumber;
         private readonly bool _isComplex;
+
+        // FIX: Made Info internal so FpgaSession can access it
+        internal readonly FifoInfo Info;
 
         internal FpgaFifo(FpgaSession session, FifoInfo info)
         {
             _session = session;
-            _info = info;
+            Info = info; // FIX: Was _info
             _fifoNumber = info.Number;
             
             // "Complex" means it uses the ...Composite functions (raw bytes)
@@ -66,9 +68,10 @@ namespace FpgaInterface
         public FifoReadResult<T> Read<T>(int count, uint timeoutMs = 0)
         {
             var expectedType = typeof(T);
-            if (_info.TypeInfo.PublicType != expectedType)
+            // FIX: Was _info.TypeInfo
+            if (Info.TypeInfo.PublicType != expectedType)
             {
-                throw new InvalidCastException($"FIFO '{_info.Name}' is of type {_info.TypeInfo.PublicType.Name}, but was requested as {expectedType.Name}.");
+                throw new InvalidCastException($"FIFO '{Info.Name}' is of type {Info.TypeInfo.PublicType.Name}, but was requested as {expectedType.Name}.");
             }
 
             var (data, remaining) = Read(count, timeoutMs);
@@ -92,7 +95,7 @@ namespace FpgaInterface
             if (!_isComplex)
             {
                 // Handle simple primitives directly
-                var typeInfo = (PrimitiveTypeInfo)_info.TypeInfo;
+                var typeInfo = (PrimitiveTypeInfo)Info.TypeInfo; // FIX: Was _info
                 if (typeInfo.PublicType == typeof(uint))
                 {
                     var buffer = new uint[count];
@@ -109,7 +112,7 @@ namespace FpgaInterface
             {
                 // Handle Complex types (FXP, Cluster, Array) via ...Composite functions
                 //
-                int bytesPerElement = _info.TransferSizeBytes;
+                int bytesPerElement = Info.TransferSizeBytes; // FIX: Was _info
                 var buffer = new byte[count * bytesPerElement];
                 StatusChecker.CheckStatus(NativeMethods.ReadFifoComposite(_session.Handle, _fifoNumber, buffer, (uint)bytesPerElement, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoComposite), args);
 
@@ -121,7 +124,7 @@ namespace FpgaInterface
                     // the BitReader handles this by being LSB-first.
                     // The ...Composite functions in Python swap endianness, which we must replicate.
                     var reader = new BitReader(SwapFifoEndianness(elementBytes, bytesPerElement));
-                    results[i] = _info.TypeInfo.Unpack(reader);
+                    results[i] = Info.TypeInfo.Unpack(reader); // FIX: Was _info
                 }
             }
             return (results, (uint)remaining);
@@ -142,7 +145,7 @@ namespace FpgaInterface
             if (!_isComplex)
             {
                 // Handle simple primitives directly
-                var typeInfo = (PrimitiveTypeInfo)_info.TypeInfo;
+                var typeInfo = (PrimitiveTypeInfo)Info.TypeInfo; // FIX: Was _info
                 if (typeInfo.PublicType == typeof(uint))
                 {
                     StatusChecker.CheckStatus(NativeMethods.WriteFifoU32(_session.Handle, _fifoNumber, (uint[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoU32), args);
@@ -157,14 +160,20 @@ namespace FpgaInterface
             {
                 // Handle Complex types (FXP, Cluster, Array) via ...Composite functions
                 //
-                int bytesPerElement = _info.TransferSizeBytes;
+                int bytesPerElement = Info.TransferSizeBytes; // FIX: Was _info
                 var buffer = new byte[data.Length * bytesPerElement];
                 var writer = new BitWriter();
 
                 for (int i = 0; i < data.Length; i++)
                 {
                     writer.WriteUInt(0, 0); // Reset writer
-                    _info.TypeInfo.Pack(data.GetValue(i), writer);
+
+                    // FIX: Handle possible null value in array
+                    object? elementValue = data.GetValue(i);
+                    if (elementValue == null)
+                        throw new ArgumentNullException(nameof(data), $"Element at index {i} is null.");
+                    
+                    Info.TypeInfo.Pack(elementValue, writer); // FIX: Was _info
                     var elementBytes = writer.GetBytes();
                     // Replicate Python's _convert_to_u8_array logic (endian swap)
                     var swappedBytes = SwapFifoEndianness(elementBytes, bytesPerElement);

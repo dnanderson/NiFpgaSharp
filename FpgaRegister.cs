@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics; // FIX: Added for BigInteger
 using System.Runtime.InteropServices;
 
 namespace FpgaInterface
@@ -12,14 +13,16 @@ namespace FpgaInterface
     public class FpgaRegister
     {
         private readonly FpgaSession _session;
-        private readonly RegisterInfo _info;
         private readonly uint _offset;
         private readonly bool _isComplex;
+        
+        // FIX: Made Info internal so FpgaSession can access it
+        internal readonly RegisterInfo Info;
 
         internal FpgaRegister(FpgaSession session, RegisterInfo info)
         {
             _session = session;
-            _info = info;
+            Info = info; // FIX: Was _info
             _offset = info.Offset;
             if (info.AccessMayTimeout)
             {
@@ -38,9 +41,10 @@ namespace FpgaInterface
         /// <returns>The value read from the FPGA.</returns>
         public T Read<T>()
         {
-            if (typeof(T) != _info.TypeInfo.PublicType)
+            // FIX: Was _info.TypeInfo
+            if (typeof(T) != Info.TypeInfo.PublicType)
             {
-                throw new InvalidCastException($"Register '{_info.Name}' is of type {_info.TypeInfo.PublicType.Name}, but was requested as {typeof(T).Name}.");
+                throw new InvalidCastException($"Register '{Info.Name}' is of type {Info.TypeInfo.PublicType.Name}, but was requested as {typeof(T).Name}.");
             }
             return (T)Read();
         }
@@ -56,7 +60,7 @@ namespace FpgaInterface
             if (!_isComplex)
             {
                 // Handle simple primitives directly
-                var typeInfo = (PrimitiveTypeInfo)_info.TypeInfo;
+                var typeInfo = (PrimitiveTypeInfo)Info.TypeInfo; // FIX: Was _info
                 if (typeInfo.PublicType == typeof(bool))
                 {
                     StatusChecker.CheckStatus(NativeMethods.ReadBool(_session.Handle, _offset, out byte val), nameof(NativeMethods.ReadBool), args);
@@ -80,7 +84,7 @@ namespace FpgaInterface
                 // Handle Complex types (FXP, Cluster, Array)
                 // These are all read as U32 arrays, matching _DataConvertingRegister
                 //
-                int numElements = (_info.TypeInfo.SizeInBits + 31) / 32;
+                int numElements = (Info.TypeInfo.SizeInBits + 31) / 32; // FIX: Was _info
                 var buffer = new uint[numElements];
                 
                 StatusChecker.CheckStatus(NativeMethods.ReadArrayU32(_session.Handle, _offset, buffer, (UIntPtr)numElements), nameof(NativeMethods.ReadArrayU32), args);
@@ -91,9 +95,9 @@ namespace FpgaInterface
 
                 // Shift data to be LSB-aligned, as Python does
                 //
-                var shiftedBytes = ShiftBytesRight(byteBuffer, (numElements * 32) - _info.TypeInfo.SizeInBits);
+                var shiftedBytes = ShiftBytesRight(byteBuffer, (numElements * 32) - Info.TypeInfo.SizeInBits); // FIX: Was _info
                 var reader = new BitReader(shiftedBytes);
-                return _info.TypeInfo.Unpack(reader);
+                return Info.TypeInfo.Unpack(reader); // FIX: Was _info
             }
         }
         
@@ -109,7 +113,7 @@ namespace FpgaInterface
             if (!_isComplex)
             {
                 // Handle simple primitives directly
-                var typeInfo = (PrimitiveTypeInfo)_info.TypeInfo;
+                var typeInfo = (PrimitiveTypeInfo)Info.TypeInfo; // FIX: Was _info
                 if (typeInfo.PublicType == typeof(bool))
                 {
                     StatusChecker.CheckStatus(NativeMethods.WriteBool(_session.Handle, _offset, (bool)value ? (byte)1: (byte)0), nameof(NativeMethods.WriteBool), args);
@@ -134,14 +138,14 @@ namespace FpgaInterface
                 // These are all written as U32 arrays
                 //
                 var writer = new BitWriter();
-                _info.TypeInfo.Pack(value, writer);
+                Info.TypeInfo.Pack(value, writer); // FIX: Was _info
 
-                int numElements = (_info.TypeInfo.SizeInBits + 31) / 32;
+                int numElements = (Info.TypeInfo.SizeInBits + 31) / 32; // FIX: Was _info
                 var byteBuffer = writer.GetBytes();
 
                 // Shift data to be MSB-aligned, as Python does
                 //
-                var shiftedBytes = ShiftBytesLeft(byteBuffer, (numElements * 32) - _info.TypeInfo.SizeInBits);
+                var shiftedBytes = ShiftBytesLeft(byteBuffer, (numElements * 32) - Info.TypeInfo.SizeInBits); // FIX: Was _info
                 
                 // Ensure buffer is correct size
                 var finalByteBuffer = new byte[numElements * 4];

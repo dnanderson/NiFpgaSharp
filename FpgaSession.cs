@@ -85,7 +85,8 @@ namespace FpgaInterface
         public void Abort()
         {
             CheckHandle();
-            StatusChecker.CheckStatus(NativeMethods.Abort(_sessionHandle, 0), nameof(NativeMethods.Abort));
+            // FIX: Removed second argument '0'
+            StatusChecker.CheckStatus(NativeMethods.Abort(_sessionHandle), nameof(NativeMethods.Abort));
         }
 
         /// <summary>
@@ -94,7 +95,8 @@ namespace FpgaInterface
         public void Reset()
         {
             CheckHandle();
-            StatusChecker.CheckStatus(NativeMethods.Reset(_sessionHandle, 0), nameof(NativeMethods.Reset));
+            // FIX: Removed second argument '0'
+            StatusChecker.CheckStatus(NativeMethods.Reset(_sessionHandle), nameof(NativeMethods.Reset));
         }
 
         /// <summary>
@@ -103,7 +105,8 @@ namespace FpgaInterface
         public void Download()
         {
             CheckHandle();
-            StatusChecker.CheckStatus(NativeMethods.Download(_sessionHandle, 0), nameof(NativeMethods.Download));
+            // FIX: Removed second argument '0'
+            StatusChecker.CheckStatus(NativeMethods.Download(_sessionHandle), nameof(NativeMethods.Download));
         }
         #endregion
 
@@ -122,9 +125,11 @@ namespace FpgaInterface
                 if (_registers.TryGetValue(name, out var reg))
                 {
                     // Validate cached type
-                    if (reg._info.TypeInfo.PublicType == typeof(T))
+                    // FIX: Changed _info to public 'Info' property
+                    if (reg.Info.TypeInfo.PublicType == typeof(T))
                         return reg;
-                    throw new InvalidCastException($"Register '{name}' was previously accessed as {reg._info.TypeInfo.PublicType.Name}, but was requested as {typeof(T).Name}.");
+                    // FIX: Changed _info to public 'Info' property
+                    throw new InvalidCastException($"Register '{name}' was previously accessed as {reg.Info.TypeInfo.PublicType.Name}, but was requested as {typeof(T).Name}.");
                 }
 
                 if (!_bitfile.Registers.TryGetValue(name, out var regInfo))
@@ -156,9 +161,11 @@ namespace FpgaInterface
                 if (_fifos.TryGetValue(name, out var fifo))
                 {
                     // Validate cached type
-                    if (fifo._info.TypeInfo.PublicType == typeof(T))
+                    // FIX: Changed _info to public 'Info' property
+                    if (fifo.Info.TypeInfo.PublicType == typeof(T))
                         return fifo;
-                    throw new InvalidCastException($"FIFO '{name}' was previously accessed as {fifo._info.TypeInfo.PublicType.Name}, but was requested as {typeof(T).Name}.");
+                    // FIX: Changed _info to public 'Info' property
+                    throw new InvalidCastException($"FIFO '{name}' was previously accessed as {fifo.Info.TypeInfo.PublicType.Name}, but was requested as {typeof(T).Name}.");
                 }
 
                 if (!_bitfile.Fifos.TryGetValue(name, out var fifoInfo))
@@ -195,6 +202,7 @@ namespace FpgaInterface
                 StatusChecker.CheckStatus(NativeMethods.ReserveIrqContext(_sessionHandle, out context), nameof(NativeMethods.ReserveIrqContext));
                 if (context == IntPtr.Zero)
                 {
+                    // FIX: Pass null for arguments, matching new Exceptions.cs
                     throw new FpgaException(-1, "Failed to reserve IRQ context.", nameof(NativeMethods.ReserveIrqContext), null);
                 }
 

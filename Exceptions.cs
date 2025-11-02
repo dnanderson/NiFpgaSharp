@@ -10,9 +10,11 @@ namespace FpgaInterface
     {
         public int StatusCode { get; }
         public string FunctionName { get; }
-        public IReadOnlyDictionary<string, object> Arguments { get; }
+        // FIX: Made dictionary nullable
+        public IReadOnlyDictionary<string, object>? Arguments { get; }
 
-        public FpgaException(int statusCode, string message, string functionName, Dictionary<string, object> arguments)
+        // FIX: Made arguments nullable
+        public FpgaException(int statusCode, string message, string functionName, Dictionary<string, object>? arguments)
             : base(FormatMessage(statusCode, message, functionName, arguments))
         {
             StatusCode = statusCode;
@@ -20,7 +22,8 @@ namespace FpgaInterface
             Arguments = arguments;
         }
 
-        private static string FormatMessage(int statusCode, string message, string functionName, Dictionary<string, object> arguments)
+        // FIX: Made arguments nullable
+        private static string FormatMessage(int statusCode, string message, string functionName, Dictionary<string, object>? arguments)
         {
             var argString = string.Empty;
             if (arguments != null && arguments.Count > 0)
@@ -60,7 +63,8 @@ namespace FpgaInterface
     /// </summary>
     public class FpgaWarning : FpgaException
     {
-        public FpgaWarning(int statusCode, string message, string functionName, Dictionary<string, object> arguments)
+        // FIX: Made arguments nullable
+        public FpgaWarning(int statusCode, string message, string functionName, Dictionary<string, object>? arguments)
             : base(statusCode, message, functionName, arguments)
         {
         }
@@ -69,103 +73,103 @@ namespace FpgaInterface
     // Specific error types (auto-generated from status codes)
     public class FifoTimeoutException : FpgaException
     {
-        public FifoTimeoutException(string functionName, Dictionary<string, object> arguments)
+        public FifoTimeoutException(string functionName, Dictionary<string, object>? arguments)
             : base(-50400, "FifoTimeout", functionName, arguments) { }
     }
 
     public class TransferAbortedException : FpgaException
     {
-        public TransferAbortedException(string functionName, Dictionary<string, object> arguments)
+        public TransferAbortedException(string functionName, Dictionary<string, object>? arguments)
             : base(-50405, "TransferAborted", functionName, arguments) { }
     }
 
     public class MemoryFullException : FpgaException
     {
-        public MemoryFullException(string functionName, Dictionary<string, object> arguments)
+        public MemoryFullException(string functionName, Dictionary<string, object>? arguments)
             : base(-52000, "MemoryFull", functionName, arguments) { }
     }
 
     public class SoftwareFaultException : FpgaException
     {
-        public SoftwareFaultException(string functionName, Dictionary<string, object> arguments)
+        public SoftwareFaultException(string functionName, Dictionary<string, object>? arguments)
             : base(-52003, "SoftwareFault", functionName, arguments) { }
     }
 
     public class InvalidParameterException : FpgaException
     {
-        public InvalidParameterException(string functionName, Dictionary<string, object> arguments)
+        public InvalidParameterException(string functionName, Dictionary<string, object>? arguments)
             : base(-52005, "InvalidParameter", functionName, arguments) { }
     }
 
     public class ResourceNotFoundException : FpgaException
     {
-        public ResourceNotFoundException(string functionName, Dictionary<string, object> arguments)
+        public ResourceNotFoundException(string functionName, Dictionary<string, object>? arguments)
             : base(-52006, "ResourceNotFound", functionName, arguments) { }
     }
 
     public class FpgaAlreadyRunningException : FpgaException
     {
-        public FpgaAlreadyRunningException(string functionName, Dictionary<string, object> arguments)
+        public FpgaAlreadyRunningException(string functionName, Dictionary<string, object>? arguments)
             : base(-61003, "FpgaAlreadyRunning", functionName, arguments) { }
     }
 
     public class DownloadErrorException : FpgaException
     {
-        public DownloadErrorException(string functionName, Dictionary<string, object> arguments)
+        public DownloadErrorException(string functionName, Dictionary<string, object>? arguments)
             : base(-61018, "DownloadError", functionName, arguments) { }
     }
 
     public class DeviceTypeMismatchException : FpgaException
     {
-        public DeviceTypeMismatchException(string functionName, Dictionary<string, object> arguments)
+        public DeviceTypeMismatchException(string functionName, Dictionary<string, object>? arguments)
             : base(-61024, "DeviceTypeMismatch", functionName, arguments) { }
     }
 
     public class CommunicationTimeoutException : FpgaException
     {
-        public CommunicationTimeoutException(string functionName, Dictionary<string, object> arguments)
+        public CommunicationTimeoutException(string functionName, Dictionary<string, object>? arguments)
             : base(-61046, "CommunicationTimeout", functionName, arguments) { }
     }
 
     public class IrqTimeoutException : FpgaException
     {
-        public IrqTimeoutException(string functionName, Dictionary<string, object> arguments)
+        public IrqTimeoutException(string functionName, Dictionary<string, object>? arguments)
             : base(-61060, "IrqTimeout", functionName, arguments) { }
     }
 
     public class CorruptBitfileException : FpgaException
     {
-        public CorruptBitfileException(string functionName, Dictionary<string, object> arguments)
+        public CorruptBitfileException(string functionName, Dictionary<string, object>? arguments)
             : base(-61070, "CorruptBitfile", functionName, arguments) { }
     }
 
     public class BadDepthException : FpgaException
     {
-        public BadDepthException(string functionName, Dictionary<string, object> arguments)
+        public BadDepthException(string functionName, Dictionary<string, object>? arguments)
             : base(-61072, "BadDepth", functionName, arguments) { }
     }
 
     public class FpgaBusyException : FpgaException
     {
-        public FpgaBusyException(string functionName, Dictionary<string, object> arguments)
+        public FpgaBusyException(string functionName, Dictionary<string, object>? arguments)
             : base(-61141, "FpgaBusy", functionName, arguments) { }
     }
 
     public class InvalidSessionException : FpgaException
     {
-        public InvalidSessionException(string functionName, Dictionary<string, object> arguments)
+        public InvalidSessionException(string functionName, Dictionary<string, object>? arguments)
             : base(-63195, "InvalidSession", functionName, arguments) { }
     }
 
     public class SignatureMismatchException : FpgaException
     {
-        public SignatureMismatchException(string functionName, Dictionary<string, object> arguments)
+        public SignatureMismatchException(string functionName, Dictionary<string, object>? arguments)
             : base(-63106, "SignatureMismatch", functionName, arguments) { }
     }
 
     public class VersionMismatchException : FpgaException
     {
-        public VersionMismatchException(string functionName, Dictionary<string, object> arguments)
+        public VersionMismatchException(string functionName, Dictionary<string, object>? arguments)
             : base(-63194, "VersionMismatch", functionName, arguments) { }
     }
 
@@ -174,7 +178,8 @@ namespace FpgaInterface
     /// </summary>
     internal static class StatusChecker
     {
-        private static readonly Dictionary<int, Func<string, Dictionary<string, object>, FpgaException>> ErrorFactories = new()
+        // FIX: Made arguments nullable
+        private static readonly Dictionary<int, Func<string, Dictionary<string, object>?, FpgaException>> ErrorFactories = new()
         {
             { -50400, (fn, args) => new FifoTimeoutException(fn, args) },
             { -50405, (fn, args) => new TransferAbortedException(fn, args) },
@@ -195,11 +200,13 @@ namespace FpgaInterface
             { -63194, (fn, args) => new VersionMismatchException(fn, args) },
         };
 
-        public static void CheckStatus(int status, string functionName, Dictionary<string, object> arguments = null)
+        // FIX: Made arguments nullable
+        public static void CheckStatus(int status, string functionName, Dictionary<string, object>? arguments = null)
         {
             if (status == 0) return;
 
-            arguments ??= new Dictionary<string, object>();
+            // FIX: No longer need this, as null is allowed
+            // arguments ??= new Dictionary<string, object>();
 
             if (ErrorFactories.TryGetValue(status, out var factory))
             {
