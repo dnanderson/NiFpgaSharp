@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NiFpga", "NiFpga.csproj", "{3C4F0AF6-0141-3750-5E5E-426A1BA2F97A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3C4F0AF6-0141-3750-5E5E-426A1BA2F97A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C4F0AF6-0141-3750-5E5E-426A1BA2F97A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C4F0AF6-0141-3750-5E5E-426A1BA2F97A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C4F0AF6-0141-3750-5E5E-426A1BA2F97A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0DDA56F0-017F-4843-930A-A276FA39B3EC}
+	EndGlobalSection
+EndGlobal
