@@ -9,6 +9,18 @@ namespace FpgaInterface
     //=================================================================
     // Public Facing Types
     //=================================================================
+    /// <summary>
+    /// Represents the result of a FIFO read operation.
+    /// </summary>
+    /// <typeparam name="T">The type of data read from the FIFO.</typeparam>
+    public record FifoReadResult<T>(T[] Data, uint ElementsRemaining);
+
+    /// <summary>
+    /// Represents the result of an IRQ wait operation.
+    /// </summary>
+    /// <param name="IrqsAsserted">A bitmask of the IRQs that asserted.</param>
+    /// <param name="TimedOut">True if the wait timed out, false otherwise.</param>
+    public record IrqWaitResult(uint IrqsAsserted, bool TimedOut);
 
     /// <summary>
     /// Represents a Fixed Point (FXP) value without overflow status.
