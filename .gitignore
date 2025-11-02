@@ -1,0 +1,36 @@
+# C# / .NET
+# 
+# User-specific files and settings
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# VS Code specific
+.vscode/
+
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Rider specific
+.idea/
+
+# Packages
+packages/
+*.nupkg
+*.nupkg.sha512
+*.snupkg
+
+# Test results
+TestResults/
+*.trx
+
+# Log files
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop
