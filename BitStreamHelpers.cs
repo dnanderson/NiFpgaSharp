@@ -143,4 +143,36 @@ namespace FpgaInterface
             WriteInt((long)rawValue, wordLength);
         }
     }
+    
+    /// <summary>
+    /// Helper methods for bit-shifting byte arrays (to align data)
+    /// </summary>
+    internal static class BitShiftHelpers
+    {
+        internal static byte[] ShiftBytesRight(byte[] data, int bits)
+        {
+            if (bits == 0) return data;
+            // Add a leading zero byte to prevent sign extension if MSB is 1
+            var num = new BigInteger(data.Concat(new byte[] { 0 }).ToArray(), isBigEndian: false, isUnsigned: false);
+            num >>= bits;
+            var bytes = num.ToByteArray(isUnsigned: true, isBigEndian: false);
+            
+            // Ensure array is the correct size if bits were shifted out
+            if (bytes.Length < data.Length)
+            {
+                var resized = new byte[data.Length];
+                Array.Copy(bytes, 0, resized, 0, bytes.Length);
+                return resized;
+            }
+            return bytes;
+        }
+
+        internal static byte[] ShiftBytesLeft(byte[] data, int bits)
+        {
+            if (bits == 0) return data;
+            var num = new BigInteger(data, isBigEndian: false, isUnsigned: true);
+            num <<= bits;
+            return num.ToByteArray(isUnsigned: true, isBigEndian: false);
+        }
+    }
 }

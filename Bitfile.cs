@@ -212,9 +212,11 @@ namespace FpgaInterface
                 case "Cluster":
                     return new ClusterTypeInfo(name, typeElement, ParseTypeElement);
                 
-                // Unsupported
+                // *** FIX: Gracefully handle String type ***
                 case "String":
-                    throw new NotSupportedException("String type is not supported."); //
+                    return new StringTypeInfo(name); 
+                
+                // Unsupported
                 case "CFXP":
                     throw new NotSupportedException("Complex Fixed Point (CFXP) is not supported."); //
                 

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics; // FIX: Added for BigInteger
+using System.Numerics; 
 using System.Runtime.InteropServices;
 
 namespace FpgaInterface
@@ -61,6 +61,7 @@ namespace FpgaInterface
             {
                 // Handle simple primitives directly
                 var typeInfo = (PrimitiveTypeInfo)Info.TypeInfo; // FIX: Was _info
+                // *** FIX: Implemented all primitive types ***
                 if (typeInfo.PublicType == typeof(bool))
                 {
                     StatusChecker.CheckStatus(NativeMethods.ReadBool(_session.Handle, _offset, out byte val), nameof(NativeMethods.ReadBool), args);
@@ -71,10 +72,49 @@ namespace FpgaInterface
                     StatusChecker.CheckStatus(NativeMethods.ReadI8(_session.Handle, _offset, out sbyte val), nameof(NativeMethods.ReadI8), args);
                     return val;
                 }
-                // ... (Add cases for U8, I16, U16, I32, I64, U64, Sgl, Dbl) ...
+                if (typeInfo.PublicType == typeof(byte))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.ReadU8(_session.Handle, _offset, out byte val), nameof(NativeMethods.ReadU8), args);
+                    return val;
+                }
+                if (typeInfo.PublicType == typeof(short))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.ReadI16(_session.Handle, _offset, out short val), nameof(NativeMethods.ReadI16), args);
+                    return val;
+                }
+                if (typeInfo.PublicType == typeof(ushort))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.ReadU16(_session.Handle, _offset, out ushort val), nameof(NativeMethods.ReadU16), args);
+                    return val;
+                }
+                if (typeInfo.PublicType == typeof(int))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.ReadI32(_session.Handle, _offset, out int val), nameof(NativeMethods.ReadI32), args);
+                    return val;
+                }
                 if (typeInfo.PublicType == typeof(uint))
                 {
                     StatusChecker.CheckStatus(NativeMethods.ReadU32(_session.Handle, _offset, out uint val), nameof(NativeMethods.ReadU32), args);
+                    return val;
+                }
+                if (typeInfo.PublicType == typeof(long))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.ReadI64(_session.Handle, _offset, out long val), nameof(NativeMethods.ReadI64), args);
+                    return val;
+                }
+                if (typeInfo.PublicType == typeof(ulong))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.ReadU64(_session.Handle, _offset, out ulong val), nameof(NativeMethods.ReadU64), args);
+                    return val;
+                }
+                if (typeInfo.PublicType == typeof(float))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.ReadSgl(_session.Handle, _offset, out float val), nameof(NativeMethods.ReadSgl), args);
+                    return val;
+                }
+                if (typeInfo.PublicType == typeof(double))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.ReadDbl(_session.Handle, _offset, out double val), nameof(NativeMethods.ReadDbl), args);
                     return val;
                 }
                 throw new NotSupportedException($"Read for primitive type {typeInfo.PublicType} not implemented.");
@@ -94,8 +134,8 @@ namespace FpgaInterface
                 Buffer.BlockCopy(buffer, 0, byteBuffer, 0, byteBuffer.Length);
 
                 // Shift data to be LSB-aligned, as Python does
-                //
-                var shiftedBytes = ShiftBytesRight(byteBuffer, (numElements * 32) - Info.TypeInfo.SizeInBits); // FIX: Was _info
+                // *** FIX: Use shared BitShiftHelpers ***
+                var shiftedBytes = BitShiftHelpers.ShiftBytesRight(byteBuffer, (numElements * 32) - Info.TypeInfo.SizeInBits); // FIX: Was _info
                 var reader = new BitReader(shiftedBytes);
                 return Info.TypeInfo.Unpack(reader); // FIX: Was _info
             }
@@ -114,6 +154,7 @@ namespace FpgaInterface
             {
                 // Handle simple primitives directly
                 var typeInfo = (PrimitiveTypeInfo)Info.TypeInfo; // FIX: Was _info
+                // *** FIX: Implemented all primitive types ***
                 if (typeInfo.PublicType == typeof(bool))
                 {
                     StatusChecker.CheckStatus(NativeMethods.WriteBool(_session.Handle, _offset, (bool)value ? (byte)1: (byte)0), nameof(NativeMethods.WriteBool), args);
@@ -124,10 +165,49 @@ namespace FpgaInterface
                     StatusChecker.CheckStatus(NativeMethods.WriteI8(_session.Handle, _offset, (sbyte)value), nameof(NativeMethods.WriteI8), args);
                     return;
                 }
-                // ... (Add cases for U8, I16, U16, I32, I64, U64, Sgl, Dbl) ...
+                if (typeInfo.PublicType == typeof(byte))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteU8(_session.Handle, _offset, (byte)value), nameof(NativeMethods.WriteU8), args);
+                    return;
+                }
+                if (typeInfo.PublicType == typeof(short))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteI16(_session.Handle, _offset, (short)value), nameof(NativeMethods.WriteI16), args);
+                    return;
+                }
+                if (typeInfo.PublicType == typeof(ushort))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteU16(_session.Handle, _offset, (ushort)value), nameof(NativeMethods.WriteU16), args);
+                    return;
+                }
+                if (typeInfo.PublicType == typeof(int))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteI32(_session.Handle, _offset, (int)value), nameof(NativeMethods.WriteI32), args);
+                    return;
+                }
                 if (typeInfo.PublicType == typeof(uint))
                 {
                     StatusChecker.CheckStatus(NativeMethods.WriteU32(_session.Handle, _offset, (uint)value), nameof(NativeMethods.WriteU32), args);
+                    return;
+                }
+                if (typeInfo.PublicType == typeof(long))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteI64(_session.Handle, _offset, (long)value), nameof(NativeMethods.WriteI64), args);
+                    return;
+                }
+                if (typeInfo.PublicType == typeof(ulong))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteU64(_session.Handle, _offset, (ulong)value), nameof(NativeMethods.WriteU64), args);
+                    return;
+                }
+                if (typeInfo.PublicType == typeof(float))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteSgl(_session.Handle, _offset, (float)value), nameof(NativeMethods.WriteSgl), args);
+                    return;
+                }
+                if (typeInfo.PublicType == typeof(double))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteDbl(_session.Handle, _offset, (double)value), nameof(NativeMethods.WriteDbl), args);
                     return;
                 }
                 throw new NotSupportedException($"Write for primitive type {typeInfo.PublicType} not implemented.");
@@ -144,8 +224,8 @@ namespace FpgaInterface
                 var byteBuffer = writer.GetBytes();
 
                 // Shift data to be MSB-aligned, as Python does
-                //
-                var shiftedBytes = ShiftBytesLeft(byteBuffer, (numElements * 32) - Info.TypeInfo.SizeInBits); // FIX: Was _info
+                // *** FIX: Use shared BitShiftHelpers ***
+                var shiftedBytes = BitShiftHelpers.ShiftBytesLeft(byteBuffer, (numElements * 32) - Info.TypeInfo.SizeInBits); // FIX: Was _info
                 
                 // Ensure buffer is correct size
                 var finalByteBuffer = new byte[numElements * 4];
@@ -159,19 +239,6 @@ namespace FpgaInterface
             }
         }
 
-        // Helper functions for bit-shifting byte arrays (to align data within the U32 array)
-        private static byte[] ShiftBytesRight(byte[] data, int bits)
-        {
-            var num = new BigInteger(data, isBigEndian: false, isUnsigned: true);
-            num >>= bits;
-            return num.ToByteArray(isUnsigned: true, isBigEndian: false);
-        }
-
-        private static byte[] ShiftBytesLeft(byte[] data, int bits)
-        {
-            var num = new BigInteger(data, isBigEndian: false, isUnsigned: true);
-            num <<= bits;
-            return num.ToByteArray(isUnsigned: true, isBigEndian: false);
-        }
+        // *** FIX: Removed private bit shift helpers (moved to BitStreamHelpers.cs) ***
     }
 }

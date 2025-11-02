@@ -232,6 +232,10 @@ namespace FpgaInterface
             {
                 array.SetValue(ElementType.Unpack(reader), i);
             }
+            
+            // *** FIX 1: Arrays are packed LSB-first, so elements are read in reverse order.
+            Array.Reverse(array);
+            
             return array;
         }
 
@@ -241,7 +245,8 @@ namespace FpgaInterface
             if (array.Length != Size)
                 throw new ArgumentException($"Array length mismatch for '{Name}'. Expected {Size}, got {array.Length}.");
             
-            for (int i = 0; i < Size; i++)
+            // *** FIX 1 (companion): Write in reverse order to match Python's forward-order packing
+            for (int i = Size - 1; i >= 0; i--)
             {
                 // FIX: Check for null element
                 object? elementValue = array.GetValue(i);
@@ -270,9 +275,13 @@ namespace FpgaInterface
             foreach (var elementXml in xml.Element("TypeList")!.Elements()) // FIX: Added null-forgiving operator
             {
                 var elementTypeInfo = typeParser(elementXml);
-                if (!names.Add(elementTypeInfo.Name))
+                // Allow empty names (from strings in error clusters) but still check for real duplicates
+                if (!string.IsNullOrEmpty(elementTypeInfo.Name))
                 {
-                    throw new NotSupportedException($"Cluster '{name}' contains duplicate element name '{elementTypeInfo.Name}'.");
+                    if (!names.Add(elementTypeInfo.Name))
+                    {
+                        throw new NotSupportedException($"Cluster '{name}' contains duplicate element name '{elementTypeInfo.Name}'.");
+                    }
                 }
                 Elements.Add((elementTypeInfo.Name, elementTypeInfo));
             }
@@ -290,7 +299,11 @@ namespace FpgaInterface
 
             for(int i = 0; i < Elements.Count; i++)
             {
-                dict.Add(Elements[i].Name, tempValues[i]);
+                // Don't add elements with no name (e.g., StringTypeInfo)
+                if (!string.IsNullOrEmpty(Elements[i].Name))
+                {
+                    dict.Add(Elements[i].Name, tempValues[i]);
+                }
             }
             return dict;
         }
@@ -305,6 +318,13 @@ namespace FpgaInterface
             // Python packs LSB first, so we write in order of definition.
             foreach (var (name, type) in Elements)
             {
+                // Skip types with no name (e.g. String)
+                if (string.IsNullOrEmpty(name))
+                {
+                    type.Pack("", writer); // Pack default/empty
+                    continue;
+                }
+
                 if (!dict.TryGetValue(name, out var elementValue))
                 {
                     throw new KeyNotFoundException($"Cluster dictionary is missing key '{name}'.");
@@ -312,5 +332,18 @@ namespace FpgaInterface
                 type.Pack(elementValue, writer);
             }
         }
+    }
+    
+    // *** FIX 2: Add StringTypeInfo stub class ***
+    /// <summary>
+    /// Stub type for Strings (which appear in error clusters)
+    /// </summary>
+    internal class StringTypeInfo : FpgaTypeInfo
+    {
+        public StringTypeInfo(string name) : base(name) { }
+        public override int SizeInBits => 0; // Strings are not supported and don't take bitfile space
+        public override Type PublicType => typeof(string);
+        public override object Unpack(BitReader reader) => "";
+        public override void Pack(object value, BitWriter writer) { /* Do nothing */ }
     }
 }

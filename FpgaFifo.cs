@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics; // Required for BitShiftHelpers
 
 namespace FpgaInterface
 {
@@ -96,13 +97,73 @@ namespace FpgaInterface
             {
                 // Handle simple primitives directly
                 var typeInfo = (PrimitiveTypeInfo)Info.TypeInfo; // FIX: Was _info
-                if (typeInfo.PublicType == typeof(uint))
+                // *** FIX: Implemented all primitive types ***
+                if (typeInfo.PublicType == typeof(bool))
+                {
+                    var buffer = new byte[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoBool(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoBool), args);
+                    for (int i = 0; i < count; i++) results[i] = buffer[i] != 0;
+                }
+                else if (typeInfo.PublicType == typeof(sbyte))
+                {
+                    var buffer = new sbyte[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoI8(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoI8), args);
+                    Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(sbyte));
+                }
+                else if (typeInfo.PublicType == typeof(byte))
+                {
+                    var buffer = new byte[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoU8(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoU8), args);
+                    Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(byte));
+                }
+                else if (typeInfo.PublicType == typeof(short))
+                {
+                    var buffer = new short[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoI16(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoI16), args);
+                    Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(short));
+                }
+                else if (typeInfo.PublicType == typeof(ushort))
+                {
+                    var buffer = new ushort[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoU16(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoU16), args);
+                    Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(ushort));
+                }
+                else if (typeInfo.PublicType == typeof(int))
+                {
+                    var buffer = new int[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoI32(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoI32), args);
+                    Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(int));
+                }
+                else if (typeInfo.PublicType == typeof(uint))
                 {
                     var buffer = new uint[count];
                     StatusChecker.CheckStatus(NativeMethods.ReadFifoU32(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoU32), args);
                     Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(uint));
                 }
-                // ... (Add cases for I8, U8, I16, U16, I32, I64, U64, Sgl, Dbl, Bool) ...
+                else if (typeInfo.PublicType == typeof(long))
+                {
+                    var buffer = new long[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoI64(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoI64), args);
+                    Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(long));
+                }
+                else if (typeInfo.PublicType == typeof(ulong))
+                {
+                    var buffer = new ulong[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoU64(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoU64), args);
+                    Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(ulong));
+                }
+                else if (typeInfo.PublicType == typeof(float))
+                {
+                    var buffer = new float[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoSgl(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoSgl), args);
+                    Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(float));
+                }
+                else if (typeInfo.PublicType == typeof(double))
+                {
+                    var buffer = new double[count];
+                    StatusChecker.CheckStatus(NativeMethods.ReadFifoDbl(_session.Handle, _fifoNumber, buffer, (UIntPtr)count, timeoutMs, out remaining), nameof(NativeMethods.ReadFifoDbl), args);
+                    Buffer.BlockCopy(buffer, 0, results, 0, count * sizeof(double));
+                }
                 else
                 {
                     throw new NotSupportedException($"Read for primitive FIFO type {typeInfo.PublicType} not implemented.");
@@ -120,10 +181,16 @@ namespace FpgaInterface
                 {
                     var elementBytes = new byte[bytesPerElement];
                     Array.Copy(buffer, i * bytesPerElement, elementBytes, 0, bytesPerElement);
-                    // Note: Python _combine_array_of_u8_into_one_value does byte swapping. We assume
-                    // the BitReader handles this by being LSB-first.
-                    // The ...Composite functions in Python swap endianness, which we must replicate.
-                    var reader = new BitReader(SwapFifoEndianness(elementBytes, bytesPerElement));
+                    
+                    // The ...Composite functions in Python swap endianness
+                    var swappedBytes = SwapFifoEndianness(elementBytes, bytesPerElement);
+                    
+                    // *** BUG FIX 2: Apply MSB-to-LSB alignment shift ***
+                    // Replicates Python's _combine_array_of_u8_into_one_value logic
+                    int bitsToShift = (bytesPerElement * 8) - Info.TypeInfo.SizeInBits;
+                    var shiftedBytes = BitShiftHelpers.ShiftBytesRight(swappedBytes, bitsToShift);
+
+                    var reader = new BitReader(shiftedBytes);
                     results[i] = Info.TypeInfo.Unpack(reader); // FIX: Was _info
                 }
             }
@@ -146,11 +213,52 @@ namespace FpgaInterface
             {
                 // Handle simple primitives directly
                 var typeInfo = (PrimitiveTypeInfo)Info.TypeInfo; // FIX: Was _info
-                if (typeInfo.PublicType == typeof(uint))
+                // *** FIX: Implemented all primitive types ***
+                if (typeInfo.PublicType == typeof(bool))
+                {
+                    var buffer = data.Cast<bool>().Select(b => b ? (byte)1 : (byte)0).ToArray();
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoBool(_session.Handle, _fifoNumber, buffer, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoBool), args);
+                }
+                else if (typeInfo.PublicType == typeof(sbyte))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoI8(_session.Handle, _fifoNumber, (sbyte[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoI8), args);
+                }
+                else if (typeInfo.PublicType == typeof(byte))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoU8(_session.Handle, _fifoNumber, (byte[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoU8), args);
+                }
+                else if (typeInfo.PublicType == typeof(short))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoI16(_session.Handle, _fifoNumber, (short[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoI16), args);
+                }
+                else if (typeInfo.PublicType == typeof(ushort))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoU16(_session.Handle, _fifoNumber, (ushort[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoU16), args);
+                }
+                else if (typeInfo.PublicType == typeof(int))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoI32(_session.Handle, _fifoNumber, (int[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoI32), args);
+                }
+                else if (typeInfo.PublicType == typeof(uint))
                 {
                     StatusChecker.CheckStatus(NativeMethods.WriteFifoU32(_session.Handle, _fifoNumber, (uint[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoU32), args);
                 }
-                // ... (Add cases for I8, U8, I16, U16, I32, I64, U64, Sgl, Dbl, Bool) ...
+                else if (typeInfo.PublicType == typeof(long))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoI64(_session.Handle, _fifoNumber, (long[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoI64), args);
+                }
+                else if (typeInfo.PublicType == typeof(ulong))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoU64(_session.Handle, _fifoNumber, (ulong[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoU64), args);
+                }
+                else if (typeInfo.PublicType == typeof(float))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoSgl(_session.Handle, _fifoNumber, (float[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoSgl), args);
+                }
+                else if (typeInfo.PublicType == typeof(double))
+                {
+                    StatusChecker.CheckStatus(NativeMethods.WriteFifoDbl(_session.Handle, _fifoNumber, (double[])data, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoDbl), args);
+                }
                 else
                 {
                     throw new NotSupportedException($"Write for primitive FIFO type {typeInfo.PublicType} not implemented.");
@@ -175,9 +283,20 @@ namespace FpgaInterface
                     
                     Info.TypeInfo.Pack(elementValue, writer); // FIX: Was _info
                     var elementBytes = writer.GetBytes();
-                    // Replicate Python's _convert_to_u8_array logic (endian swap)
-                    var swappedBytes = SwapFifoEndianness(elementBytes, bytesPerElement);
-                    Array.Copy(swappedBytes, 0, buffer, i * bytesPerElement, swappedBytes.Length);
+
+                    // *** BUG FIX 3: Apply LSB-to-MSB alignment shift ***
+                    // Replicates Python's _convert_to_u8_array logic
+                    int bitsToShift = (bytesPerElement * 8) - Info.TypeInfo.SizeInBits;
+                    var shiftedBytes = BitShiftHelpers.ShiftBytesLeft(elementBytes, bitsToShift);
+
+                    // Replicate Python's endian swap
+                    var swappedBytes = SwapFifoEndianness(shiftedBytes, bytesPerElement);
+                    
+                    // Ensure the swapped bytes fit into the per-element buffer slice
+                    var finalElementBytes = new byte[bytesPerElement];
+                    Array.Copy(swappedBytes, 0, finalElementBytes, 0, Math.Min(swappedBytes.Length, finalElementBytes.Length));
+                    
+                    Array.Copy(finalElementBytes, 0, buffer, i * bytesPerElement, finalElementBytes.Length);
                 }
                 
                 StatusChecker.CheckStatus(NativeMethods.WriteFifoComposite(_session.Handle, _fifoNumber, buffer, (uint)bytesPerElement, (UIntPtr)data.Length, timeoutMs, out remaining), nameof(NativeMethods.WriteFifoComposite), args);
@@ -194,12 +313,34 @@ namespace FpgaInterface
             if (bytesPerElement <= 2) return data; // 1 and 2 byte elements are not swapped in python
 
             var swapped = new byte[data.Length];
-            for (int i = 0; i < data.Length; i += 4)
+            int words = data.Length / 4;
+            
+            for (int i = 0; i < words; i++)
             {
-                swapped[i] = data[i + 3];
-                swapped[i + 1] = data[i + 2];
-                swapped[i + 2] = data[i + 1];
-                swapped[i + 3] = data[i];
+                int baseIdx = i * 4;
+                // Handle partial last word if data.Length is not a multiple of 4
+                if (baseIdx + 3 < data.Length)
+                {
+                    swapped[baseIdx] = data[baseIdx + 3];
+                    swapped[baseIdx + 1] = data[baseIdx + 2];
+                    swapped[baseIdx + 2] = data[baseIdx + 1];
+                    swapped[baseIdx + 3] = data[baseIdx];
+                }
+                else if (baseIdx + 2 < data.Length)
+                {
+                    swapped[baseIdx] = data[baseIdx + 2];
+                    swapped[baseIdx + 1] = data[baseIdx + 1];
+                    swapped[baseIdx + 2] = data[baseIdx];
+                }
+                else if (baseIdx + 1 < data.Length)
+                {
+                    swapped[baseIdx] = data[baseIdx + 1];
+                    swapped[baseIdx + 1] = data[baseIdx];
+                }
+                else if (baseIdx < data.Length)
+                {
+                    swapped[baseIdx] = data[baseIdx];
+                }
             }
             return swapped;
         }

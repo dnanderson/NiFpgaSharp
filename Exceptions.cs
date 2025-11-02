@@ -53,7 +53,8 @@ namespace FpgaInterface
                 int i => $"0x{i:X8}",
                 long l => $"0x{l:X16}",
                 string str => $"\"{str}\"",
-                _ => value.ToString()
+                // *** FIX: Handle possible null from ToString() ***
+                _ => value.ToString() ?? "null"
             };
         }
     }
